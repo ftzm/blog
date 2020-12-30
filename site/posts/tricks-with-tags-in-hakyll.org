@@ -1,0 +1,122 @@
+#+TITLE: Related Posts in Hakyll
+#+PUBLISHED: 2018-06-25
+#+TEASER: The Hakyll framework provides tags out of the box, but no way to leverage them to automatically link to related posts. This post describes how to leverage the existing tags functionality to that end.
+#+TAGS: :hakyll:haskell:
+
+* The trouble of referencing posts in posts
+The first step in setting up related posts is getting access to other posts within the post compilation function. Take the hakyll-init sample website as an example. Say we're generating our posts with some code like the following:
+#+BEGIN_SRC haskell
+match "posts/*" $ do
+    route $ setExtension "html"
+    compile $ pandocCompiler
+        >>= loadAndApplyTemplate "templates/post.html"    postCtx
+        >>= loadAndApplyTemplate "templates/default.html" postCtx
+        >>= relativizeUrls
+#+END_SRC
+If we look at the code to generate the archive page, which has a list of all posts, we'll see some lines like the following of loading the posts:
+#+begin_src haskell
+compile $ do
+    posts <- recentFirst =<< loadAll "posts/*"
+#+end_src
+we might naively try to implant this into our posts compiler like this:
+#+BEGIN_SRC haskell
+match "posts/*" $ do
+    route $ setExtension "html"
+    compile $ do
+        posts <- recentFirst =<< loadAll "posts/*" -- posts to use later
+        pandocCompiler
+            >>= loadAndApplyTemplate "templates/post.html"    postCtx
+            >>= loadAndApplyTemplate "templates/default.html" postCtx
+            >>= relativizeUrls
+#+END_SRC
+This, however, will produce the following error: ~[ERROR] Hakyll.Core.Runtime.chase: Dependency cycle detected: some-post.md depends on some-post.md~. This is because we've asked the post compiling function to depend upon the list of all parsed posts, including itself, which fails for obvious reasons. How can we get around this limitation?
+* Doubling up with versions
+Since we can't reference the post list list as it's being generated, we'll have to find a way to compile a separate list. Thankfully hakyll provides us with the ability to do just that via [[https://jaspervdj.be/hakyll/tutorials/06-versions.html][versions]]. Below we compile a separate list of posts, to which we attach the version name "meta":
+#+begin_src haskell
+    match "posts/*" $ version "meta" $ do
+        route   $ setExtension "html"
+        compile getResourceBody
+#+end_src
+We can then change the post loading line above to use the "meta" version of posts.
+#+BEGIN_SRC haskell
+posts <- loadAll ("posts/*" .&&. hasVersion "meta")
+#+END_SRC
+This compiles, but introduces another issue that must be addressed.
+* Dealing with duplicate posts
+Now that we're compiling two lists of posts using ~match "posts/*"~, we'll run into an issue where we have duplicate posts anywhere we load posts without specifying a version. There are two ways of dealing with this: using ~hasNoVersion~ or applying a version to both sets of posts and addressing what might be considered a bug in ~tagsRules~
+** using hasNoVersion
+The simpler option is to use ~hasNoVersion~ anywhere you aren't using the "meta" version. It will look like this:
+#+begin_src haskell
+posts <- (loadAll ("posts/*" .&&. hasNoVersion)
+#+end_src
+The only downside of this approach is that to me, at least, it feels hacky.
+** using two versions and fixing TagsRules
+If all of the lists of posts have versions, the ~tagsRules~ function, responsible for generating pages which list all posts possessing a given tag, will create empty pages. This is because ~tagsRules~, makes use of the fromList function, which as per its [[https://jaspervdj.be/hakyll/reference/Hakyll-Core-Identifier-Pattern.html][documentation]] requires special handling of versions. I have fixed this by following [[http://hakyll.narkive.com/RqvLp93d/setversion-and-a-pattern][this post]] and rolling my own version of tagsRules.
+#+begin_src haskell
+tagsRulesVersioned :: Tags -> (String -> [Identifier] -> Rules ()) -> Rules ()
+tagsRulesVersioned tags rules =
+    forM_ (tagsMap tags) $ \(tag, identifiers) ->
+        rulesExtraDependencies [tagsDependency tags] $
+            create [tagsMakeId tags tag] $
+                rules tag identifiers
+#+end_src
+This function is treated slightly differently than plain ~tagsRules~. This difference is shown inline in the below:
+#+begin_src haskell
+    tagsRulesVersioned tags $ \tag pattern -> do
+        let title = "Posts tagged \"" ++ tag ++ "\""
+        route idRoute
+        compile $ do
+            -- The old version with tagsRules:
+            -- posts <- recentFirst =<< loadAll pattern
+            -- The new version with tagsRulesVersioned:
+            posts <- loadAll $ fromList $ map (setVersion $ Just "meta") identifiers
+            let ctx = constField "title" title
+                      `mappend` listField "posts" postCtx (return posts)
+                      `mappend` defaultContext
+
+            makeItem ""
+                >>= loadAndApplyTemplate "templates/tag.html" ctx
+                >>= loadAndApplyTemplate "templates/default.html" ctx
+                >>= relativizeUrls
+#+end_src
+* Gathering related posts
+Now that we've compiled a separate list of posts, we need a way to get related ones into the context for our post template. For that we need to write a context function. Here's a bit of a code dump showing how I accomplished this.
+
+#+begin_src haskell
+-- |A context that adds related posts under "related"
+relatedPostsCtx
+  :: [Item String] -- ^ List of post items
+  -> Int           -- ^ Number of related posts to collect
+  -> Context String
+relatedPostsCtx posts n = listFieldWith "related" postCtx selectPosts
+  where
+    rateItem ts i = length . filter (`elem` ts) <$> (getTags $ itemIdentifier i)
+    selectPosts s = do
+      postTags <- getTags $ itemIdentifier s
+      let trimmedItems = filter (not . matchPath s) posts --exclude current post
+      take n . reverse <$> sortOnM (rateItem postTags) trimmedItems
+
+-- |Compare two items for equality based on their filepaths
+matchPath :: Item String -> Item String -> Bool
+matchPath x y = eqOn (toFilePath . itemIdentifier) x y
+
+eqOn :: Eq b => (a -> b) -> a -> a -> Bool
+eqOn f x y = f x == f y
+
+sortOnM :: (Monad m, Ord b) => (a -> m b) -> [a] -> m [a]
+sortOnM f xs = map fst . sortBy (comparing snd) . zip xs <$> mapM f xs
+#+end_src
+
+The last step is to apply this context in your post compilation section. Here's what that looks like for me; adapting this should be quite straightforward.
+
+#+begin_src haskell
+    match "posts/*" $ version "html" $ do
+        route $ setExtension "html"
+        compile $ do
+          ps <- loadAll ("posts/*" .&&. hasVersion "meta") :: Compiler [Item String]
+          let ctx = tagsCtx tags <> postCtx <> relatedPostsCtx ps 2
+          compiler
+            >>= loadAndApplyTemplate "templates/post.html" ctx
+            >>= loadAndApplyTemplate "templates/default.html" ctx
+            >>= relativizeUrls
+#+end_src

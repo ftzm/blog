@@ -1,0 +1,16 @@
+* Written in org mode
+* Generated with Haskell + Slick
+** Slick vs Hakyll
+
+Hakyll's "DSL" makes it easy to get up-and-running if you follow established patterns, but it's implemented in a sufficiently mystical fashion to make changing or adding functionality a real headache.
+
+Slick, on the other hand, is much easier to grok; it essentially consists of some utilities to glue together well-established libraries and tools:
+- Pandoc to convert between the markup language and HTML
+- Mustache for templating
+- Shake for building and caching the output files
+- Aeson to manipulate JSON at various stages.
+A slick blog requires a few more lines and bit more understanding on the part of the author, but in my view it is easier and more transparent in the long run.
+
+* Local development
+* Built with Nix
+* Deployed with

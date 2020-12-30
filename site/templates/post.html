@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+  {{>site/templates/head.html}}
+<body>
+    {{>site/templates/header.html}}
+
+<div id="page">
+    <div class="wrapper">
+        <div class="masthead">
+            <div class="tags">
+	      <span class="doctype">Article</span>
+              —{{#tags}}
+              <a href="/tag/{{.}}" class="tag {{.}}">{{.}}</a>
+              {{/tags}}
+            </div>
+            <span class="title">
+                {{title}}
+            </span>
+            <br>
+
+            {{#image}}
+            <img class="post-image" src="/images/{{image}}">
+            {{/image}}
+            <br>
+            <div class="metadata">
+	      <div class="headshot">
+		<img class="headshot-image" src="/images/headshot.png">
+	      </div>
+            <span class="author">Matthew Fitzsimmons</span>
+            <span class="published">{{humanDate}} • 8 min read</span>
+            </div>
+	    <hr>
+        </div>
+    </div>
+    <article class="post">
+      {{{content}}}
+    </article>
+
+
+    <div class="adjacent">
+      {{#prev}}
+      <a href="/{{url}}" class="prev">
+	<div class="arrow">
+	  <i class="fas fa-chevron-left"></i>
+	</div>
+	<div class="sample">
+	  <h2>{{title}}</h2>
+	  <p>{{teaser}}</p>
+	  <date>{{humanDate}}</date>
+	</div>
+      </a>
+      {{/prev}}
+      {{#next}}
+      <a href="/{{url}}" class="next">
+	<div class="sample">
+	  <h2>{{title}}</h2>
+	  <p>{{teaser}}</p>
+	  <date>{{humanDate}}</date>
+	</div>
+	<div class="arrow">
+	  <i class="fas fa-chevron-right"></i>
+	</div>
+      </a>
+      {{/next}}
+    </div>
+        <br>
+        <br>
+
+</div>
+
+{{>site/templates/footer.html}}

@@ -1,0 +1,54 @@
+#+TITLE: Org mode and hakyll
+#+PUBLISHED: 2018-05-01
+#+TEASER: Writing hakyll posts with org mode works well and allows a great emacs-based workflow.
+#+TAGS: :hakyll:org:emacs:
+
+* Introduction
+Since adopting Emacs I've begun using [[https://orgmode.org/][org mode]] extensively for note-taking and personal organization. It's a natural choice for outlining an article or blog post, and what's more, [[https://jaspervdj.be/hakyll/][Hakyll]] (using [[https://jaspervdj.be/hakyll/][Pandoc]]) will compile org files just as readily as it will markdown--no configuration required.
+* Features
+Org markup is too rich to be completely converted to html, but a respectable subset is. Simple things like *bold*, _underline_ and /italic/ are of course supported. Here are some other examples:
+** Subheadings
+Pandoc will support up to sub-sub-headings, but no more.
+*** Subsubheading one
+He doesn't have much to say.
+*** Subsubheading two
+** Lists
+This is an unordered list:
+- this is a list
+- another element
+- another element
+
+Ordered lists are also handled properly:
+1. First
+2. Second
+3. Third
+
+It also supports this format with items and inset information underneath:
+- Some Item :: Information abouth this item is expanded upon.
+- Other Item :: Here is some other information relating to the second item.
+** Source
+Wouldn't it be interesting to see some source? You can do inline code =echo "like this"=, and also separate code blocks:
+#+BEGIN_SRC haskell
+factorial :: Int -> Int
+factorial 0 = 1
+factorial n = n * factorial (n - 1)
+#+END_SRC
+Org mode is smart enough to correctly highlight the code-block in org-mode itself, so you don't publish embarassing typos. Just one more thing to be impressed by.
+** Quote
+This is a quote:
+#+BEGIN_QUOTE
+Everything should be made as simple as possible,
+but not any simpler ---Albert Einstein
+#+END_QUOTE
+** Table
+
+My CSS may not do this justice, but this a proper table.
+|  A |  B | Long C Column |  D |
+|----+----+---------------+----|
+|  1 |  2 |             3 |  4 |
+| 10 | 20 |            30 | 40 |
+
+I remember back in the day when you would create your whole page layout with these bad boys. Then these upstarts named "divs" came along...
+
+* In sum
+Org mode is no more convenient to write than markdown; it's edge is that it allows you to write a rough sketch and then slowly flesh it out into a finished article. Anything that lowers the barrier to producing finished articles is valueable in my estimation.

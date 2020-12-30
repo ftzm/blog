@@ -1,0 +1,7 @@
+/docs
+/.shake
+/dist
+/dist-newstyle
+
+#nix
+/result*

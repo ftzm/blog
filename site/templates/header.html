@@ -1,0 +1,35 @@
+<header>
+    <nav class="smallHide">
+        <a {{#homePage}}class="current-tab"{{/homePage}} href="/">
+            <div id="home-text"> Home </div>
+        </a>
+        <a {{#blogPage}}class="current-tab"{{/blogPage}} href="/">
+            <div id="home-text"> Blog </div>
+        </a>
+        <a {{#aboutPage}}class="current-tab"{{/aboutPage}} href="/about">
+            <div id="home-text"> About </div>
+        </a>
+    </nav>
+
+    <div id="menu" class="bigHide"><i class="fas fa-bars"></i></div>
+
+    <div class="right-sidebar">
+        <a class="ext-link smallHide" href="/atom.xml">
+	  <i class="fas fa-rss"></i>
+        </a>
+        {{#githubUser}}
+        <a class="ext-link smallHide" href="https://github.com/{{githubUser}}">
+	  <i class="fab fa-github"></i>
+        </a>
+        {{/githubUser}}
+
+        {{#twitterHandle}}
+        <a class="ext-link smallHide" href="https://twitter.com/{{twitterHandle}}">
+	  <i class="fab fa-twitter"></i>
+        </a>
+        {{/twitterHandle}}
+	<div id="theme-button" class="smallHide">
+	  <i class="fas fa-adjust"></i>
+	</div>
+    </div>
+</header>
