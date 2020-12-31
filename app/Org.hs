@@ -2,18 +2,17 @@
 
 module Org where
 
+import           Data.Aeson as A
+import           Data.Char (toLower)
+import           Data.List as L
+import           Data.Map as M
+import           Data.Maybe (fromJust)
+import qualified Data.Text as T
 import           Development.Shake
-import Text.Pandoc hiding (getCurrentTime)
-import Text.Pandoc.Builder
-import Slick.Pandoc
-import Data.List as L
-import Data.Maybe (fromJust)
-import Data.Map as M
-import Data.Char (toLower)
-import Data.List.Split
-import qualified Data.Text                  as T
-import           Data.Aeson                 as A
-import Text.Pandoc
+import           Slick.Pandoc
+import           Text.Pandoc
+import           Text.Pandoc.Builder
+import           Text.Pandoc.Parsing
 
 defaultOrgOptions :: ReaderOptions
 defaultOrgOptions =
@@ -26,43 +25,59 @@ defaultOrgOptions =
        ]
      ]
 
-orgAllMeta :: Pandoc -> Pandoc
-orgAllMeta (Pandoc (Meta meta) blocks) = Pandoc meta' blocks'
+-- | Parse a RawBlock as an org metadata key-value pair.
+orgMetaKV :: Block -> (T.Text, MetaValue)
+orgMetaKV (RawBlock _ txt) =
+  case (parse parser "" txt) of
+    Left err  -> error $ show err
+    Right xs  -> xs
   where
-    meta' = Meta $ M.union meta newMeta
+    parser = do
+      _ <- string "#+"
+      key <- manyTill anyChar $ string ": "
+      value <- colonList <|> remainder
+      return (T.pack $ L.map toLower key, toMetaValue value)
+    colonList = toMetaValue <$> do
+      _ <- char ':'
+      endBy (many alphaNum) (char ':')
+    remainder = toMetaValue <$> many anyChar
+orgMetaKV _ = error "Invalid block type for org metadata"
+
+-- | Parse unparsed org metadata from pandoc blocks and move to Meta.
+-- This is useful because Pandoc's org parser ignores all but a few
+-- metadata keys by default.
+orgAllMeta :: Pandoc -> Pandoc
+orgAllMeta (Pandoc (Meta meta) blocks) = Pandoc expandedMeta remainderBlocks
+  where
+    expandedMeta = Meta $ M.union meta newMeta
     newMeta = M.fromList $ L.map orgMetaKV rawMeta
-    orgMetaKV (RawBlock _ txt) = (T.pack $ L.map toLower k, if L.isPrefixOf ":" v then toMetaValue $ L.map T.pack $ L.filter (not . L.null) $ splitOn ":" v else toMetaValue $ T.pack v)
-      where stripped = fromJust $ stripPrefix "#+" $ T.unpack txt
-            (k, v) = fmap (L.drop 2) $ L.splitAt (fromJust $ L.elemIndex ':' stripped) stripped
-    (rawMeta, blocks') = span rawOrgBlock blocks
+    (rawMeta, remainderBlocks) = span rawOrgBlock blocks
     rawOrgBlock b
       | RawBlock (Format "org") _ <- b = True
       | otherwise = False
 
-readOrgFiltered :: PandocMonad m => (Pandoc -> Pandoc) -> ReaderOptions -> T.Text -> m Pandoc
-readOrgFiltered f o t = f <$> readOrg o t
-
 orgToHTMLWithOpts
-    :: ReaderOptions  -- ^ Pandoc reader options to specify extensions or other functionality
-    -> WriterOptions  -- ^ Pandoc writer options to modify output
-    -> T.Text         -- ^ Text for conversion
+    :: ReaderOptions
+    -> WriterOptions
+    -> T.Text
     -> Action Value
 orgToHTMLWithOpts rops wops txt =
   loadUsing
-    (readOrgFiltered orgAllMeta rops)
+    (fmap orgAllMeta <$> readOrg rops) -- <$> is over partially applied func
     (writeHtml5String wops)
     txt
 
 orgToHTML :: T.Text -> Action Value
-orgToHTML txt =  orgToHTMLWithOpts defaultOrgOptions wops txt
-  where wops = defaultHtml5Options
-          { writerTableOfContents = True
-          --, writerTemplate        = Just tocTemplate
-          }
+orgToHTML txt =  orgToHTMLWithOpts defaultOrgOptions defaultHtml5Options txt
 
-        -- When did it get so hard to compile a string to a Pandoc template?
-        -- tocTemplate :: Template T.Text
-        -- tocTemplate =
-        --   either error id $ either (error . show) id $
-        --   runPure $ runWithDefaultPartials $
-        --   compileTemplate "" "$toc$\n$content$"
+-- orgToHTML :: T.Text -> Action Value
+-- orgToHTML txt =  orgToHTMLWithOpts defaultOrgOptions wops txt
+--   where wops = defaultHtml5Options
+--           { writerTableOfContents = True
+--           , writerTemplate        = Just tocTemplate
+--           }
+--         tocTemplate :: Template T.Text
+--         tocTemplate =
+--           either error id $ either (error . show) id $
+--           runPure $ runWithDefaultPartials $
+--           compileTemplate "" "$toc$\n$content$"
