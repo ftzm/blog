@@ -1,0 +1,273 @@
+#+TITLE: New Year, New Blog
+#+PUBLISHED: 2021-02-04
+#+TEASER: I've overhauled my blog. It's still static, and I'm still using Haskell and Nix, but nearly everything else has changed.
+#+TAGS: :slick:haskell:pandoc:nix:
+
+I've overhauled my blog. It's still static, and I'm still using Haskell and Nix, but nearly everything else has changed. I have:
+
+- given it a new style with a dark mode
+- switched the blog framework from Hakyll to Slick
+- migrated the nix bootstrapping to flakes
+- switched from a docker image to a NixOS server deployed via deploy-rs
+
+It was a totally unnecessary project, but it gave me a welcome chance to play around with some new tools over the holidays, and I'm very happy with how it turned out. The following is a write-up of the major features of the new implementation.
+
+* Written in org mode
+
+Markdown might be the more obvious choice as a markup language, but if you've already invested in becoming productive with org mode then the latter is easily the better option. It's also best to reduce friction to creating content, and org mode is what I naturally reach for when I want to capture and expand on an idea.
+
+* Generated with Haskell + Slick
+
+Hakyll has served me well for years, but so far I'm happy with the switch to the simpler Slick. Hakyll's "DSL" makes it easy to get up-and-running if you follow established patterns, but it's implemented in a sufficiently mystical fashion to make changing or adding functionality a real headache. Slick, on the other hand, is much easier to grok; it essentially consists of some utilities to glue together well-established libraries and tools:
+- Pandoc to convert between the markup language and HTML
+- Mustache for templating
+- Shake for building and caching the output files
+- Aeson to manipulate JSON at various stages
+A slick blog requires a few more lines and bit more up-front understanding on the part of the author, but in my view it is easier and more transparent in the long run.
+
+** Using Org-mode with Slick
+
+As of now Slick only has built-in support for markdown. Thankfully it's trivial to switch out the default markdown parsing functions with custom code to handle org mode. The ~orgToHTML~ function below can be used in place of slick's ~markdownToHTML~:
+
+#+begin_src haskell
+import           Data.Aeson as A
+import qualified Data.Text as T
+import           Development.Shake
+import           Text.Pandoc
+import           Slick.Pandoc
+
+defaultOrgOptions :: ReaderOptions
+defaultOrgOptions =
+  def { readerExtensions = exts }
+  where
+    exts = mconcat
+     [ extensionsFromList
+       [ Ext_fenced_code_attributes
+       , Ext_auto_identifiers
+       ]
+     ]
+
+orgToHTMLWithOpts :: ReaderOptions -> WriterOptions -> T.Text -> Action Value
+orgToHTMLWithOpts rops wops txt =
+  loadUsing (readOrg rops) (writeHtml5String wops) txt
+
+orgToHTML :: T.Text -> Action Value
+orgToHTML txt =  orgToHTMLWithOpts defaultOrgOptions defaultHtml5Options txt
+#+end_src
+
+** Handling arbitrary org metadata with Pandoc
+
+The downside of using org mode is the limited support for metadata parsing. Unlike the markdown parser, the org mode parser doesn't support yaml style metadata like the following:
+
+#+begin_src yaml
+---
+title: my article
+tags: [writing, blogging]
+---
+#+end_src
+
+It does support the standard org mode metadata format, where lines of the format ~#+key: value~ are placed at the beginning of the file. However, only a few standard keys are recognized--the rest are ignored. Thankfully the ~Pandoc~ datatype can be easily be re-parsed to capture un-parsed metadata lines. See below:
+
+#+begin_src haskell
+{-# LANGUAGE OverloadedStrings     #-}
+
+import           Data.Aeson as A
+import           Data.Char (toLower)
+import           Data.List as L
+import           Data.Map as M
+import qualified Data.Text as T
+import           Development.Shake
+import           Slick.Pandoc
+import           Text.Pandoc
+import           Text.Pandoc.Builder
+import           Text.Pandoc.Parsing
+
+-- | Parse a RawBlock as an org metadata key-value pair.
+orgMetaKV :: Block -> (T.Text, MetaValue)
+orgMetaKV (RawBlock _ txt) =
+  case (parse parser "" txt) of
+    Left err  -> error $ show err
+    Right xs  -> xs
+  where
+    parser = do
+      _ <- string "#+"
+      key <- manyTill anyChar $ string ": "
+      value <- colonList <|> remainder
+      return (T.pack $ L.map toLower key, toMetaValue value)
+    colonList = toMetaValue <$> do
+      _ <- char ':'
+      endBy (many alphaNum) (char ':')
+    remainder = toMetaValue <$> many anyChar
+orgMetaKV _ = error "Invalid block type for org metadata"
+
+-- | Parse unparsed org metadata from pandoc blocks and move to Meta.
+-- This is useful because Pandoc's org parser ignores all but a few
+-- metadata keys by default.
+orgAllMeta :: Pandoc -> Pandoc
+orgAllMeta (Pandoc (Meta meta) blocks) = Pandoc expandedMeta remainderBlocks
+  where
+    expandedMeta = Meta $ M.union meta newMeta
+    newMeta = M.fromList $ L.map orgMetaKV rawMeta
+    (rawMeta, remainderBlocks) = span rawOrgBlock blocks
+    rawOrgBlock b
+      | RawBlock (Format "org") _ <- b = True
+      | otherwise = False
+#+end_src
+
+We can plug this into the previous code by making the following change:
+
+#+begin_src haskell
+orgToHTMLWithOpts :: ReaderOptions -> WriterOptions -> T.Text -> Action Value
+orgToHTMLWithOpts rops wops txt =
+  loadUsing
+    (fmap orgAllMeta <$> readOrg rops) -- <$> is over partially applied func
+    (writeHtml5String wops)
+    txt
+#+end_src
+
+* Built with Nix
+
+The project derivations are defined in a ~release.nix~:
+
+#+begin_src nix
+{ pkgs }:
+
+rec {
+  generator = pkgs.haskellPackages.developPackage {
+    root = ./.;
+    modifier = drv: pkgs.haskell.lib.overrideCabal drv (attrs: {
+        buildTools = with pkgs; (attrs.buildTools or []) ++ [
+          haskellPackages.cabal-install
+          haskellPackages.hpack
+          haskellPackages.ghcid
+          zlib
+        ];
+        configureFlags = [
+          "--extra-lib-dirs=${pkgs.zlib}/lib"
+        ];
+      }) ;
+  };
+  files = pkgs.stdenv.mkDerivation {
+    name = "ftzm-blog";
+    src = ./.;
+    phases = "unpackPhase buildPhase";
+    version = "0.1";
+    buildInputs = [ generator ];
+    buildPhase = ''
+      mkdir $out
+      export LOCALE_ARCHIVE="${pkgs.glibcLocales}/lib/locale/locale-archive";
+      export LANG=en_US.UTF-8
+      build-site
+      cp -r docs/* $out
+    '';
+ };
+}
+#+end_src
+
+The first derivation is a simple haskell build of the blog generator. It relies on a standard ~project.yaml~ in the root directory which defines the details of the haskell build. Defining the haskell build in a project.yaml rather than in nix itself allows us to use cabal in a nix shell for local development, which is considerably more convenient. The second derivation simply uses the binary from the first derivation to build the site's static assets.
+
+I don't build the derivation in this file directly; I call it from a [[https://nixos.wiki/wiki/Flakes][flake file]] like the following:
+
+#+begin_src nix
+{
+  description = "blog";
+
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/19b5ddfbb951013461d39352bf05e6248369d580";
+  outputs = { self, nixpkgs }:
+    let
+      packages = with import nixpkgs { system = "x86_64-linux"; };
+          callPackage ./release.nix {};
+
+    in
+      {
+        packages.x86_64-linux.generator = packages.generator;
+        packages.x86_64-linux.files = packages.files;
+        defaultPackage.x86_64-linux = packages.generator;
+      };
+}
+#+end_src
+
+While still experimental, I've found flakes to be very ergonomic, and I really appreciate the first-class support for dependency pinning. Using this flake, I can build the (default package) generator with ~nix build~ or target the files attribute with ~nix build .#files~.
+
+* Local development
+
+Using flakes, we can run ~nix develop~ to start a development shell for the default package of the flake (in this case the generator). This will make cabal available and other build tools available. We can serve up the statically generated files via [[https://www.npmjs.com/package/serve][serve]], and use [[https://eradman.com/entrproject/][entr]] to ensure that the files are re-generated on changes to the generator. Here's the script I'm using for this site:
+
+#+begin_src bash
+#!/usr/bin/env bash
+
+# Rebuild on template/content change
+find site/ | entr -p sh -c 'cabal run' &
+
+# Rebuild on generator change
+find app/ | entr -p sh -c 'rm -r .shake; rm -r docs; cabal run' &
+
+# Clean up the terminal on exit
+trap "reset" EXIT
+
+# Serve static files
+serve docs
+#+end_src
+
+* Deployed with deploy-rs
+
+The blog files are served by Nginx on a tiny server running NixOS. To deploy I'm using [[https://github.com/serokell/deploy-rs][deploy-rs]], a new nix deployment tool by the folks at [[https://www.serokell.io][Serokell]]. So far I prefer it to other nix deployment tools I've used in the past, mainly because:
+
+- It's stateless
+- It's based on flakes, making version pinning first class.
+- It's well-documented and easy to use (not a given for tools in this space)
+
+Like other tools of this nature, it relies on a NixOS configuration for the server and some extra configuration governing building and deployment details. The my full ~server.nix~ contains many incidental details beyond the scope of this article, but the key portion defining the nginx service serving the blog is as follows:
+
+#+begin_src nix
+  services = {
+    nginx = {
+      enable = true;
+      virtualHosts."ftzm.org" = {
+        enableACME = true;
+        forceSSL = true;
+        root = "${nginxWebRoot}";
+        locations = {
+          "/" = {
+            extraConfig = ''
+               # hide .html ending
+               if ($request_uri ~ ^/(.*)\.html$) {
+		               return 302 $scheme://$http_host/$1;
+               }
+               try_files $uri $uri.html $uri/ =404;
+            '';
+          };
+        };
+        extraConfig = ''
+	        error_page 404 /404.html;
+        '';
+      };
+    };
+  };
+#+end_src
+
+Nix makes it easy to get Nginx running in just a few lines. Really the only essential line in ~virtualhosts."ftzm.org"~ is setting ~root = ${nginxWebRoot}~ where nginxWebRoot points to the blog files package defined above. The NixOS configuration is in turn imported as ~blog-system~ in the top level flake:
+
+#+begin_src nix
+        nixosConfigurations.blog-system = nixpkgs.lib.nixosSystem {
+          system = "x86_64-linux";
+          modules = [ (import ./server.nix { nginxWebRoot = packages.files;})];
+        };
+#+end_src
+
+Up until this point everything has been vanilla Nix. The final piece of the puzzle is to specify ~deploy.nodes~, which will tell deploy-rs what to deploy. Each node represents a target server to deploy to. We define a node also named ~blog-system~, within which we specify the server's hostname, the nix profile to deploy to, and within that the ~path~ of the deployment, which is essentially the deployment command. The deployment command in this case is to activate the blog-system nixos configuration.
+
+#+begin_src nix
+        deploy.nodes.blog-system = {
+          hostname = "ftzm.org";
+          profiles.system = {
+            sshUser = "root";
+            user = "root";
+            path = deploy-rs.lib.x86_64-linux.activate.nixos self.nixosConfigurations.blog-system;
+          };
+        # This is highly advised, and will prevent many possible mistakes
+        checks = builtins.mapAttrs (system: deployLib: deployLib.deployChecks self.deploy) deploy-rs.lib;
+        };
+#+end_src
+
+All that's necessary to deploy to the defined nodes is to run the following command: ~nix run github:serokell/deploy-rs ./. -- -- --impure~.

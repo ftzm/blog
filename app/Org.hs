@@ -6,7 +6,6 @@ import           Data.Aeson as A
 import           Data.Char (toLower)
 import           Data.List as L
 import           Data.Map as M
-import           Data.Maybe (fromJust)
 import qualified Data.Text as T
 import           Development.Shake
 import           Slick.Pandoc
@@ -56,11 +55,7 @@ orgAllMeta (Pandoc (Meta meta) blocks) = Pandoc expandedMeta remainderBlocks
       | RawBlock (Format "org") _ <- b = True
       | otherwise = False
 
-orgToHTMLWithOpts
-    :: ReaderOptions
-    -> WriterOptions
-    -> T.Text
-    -> Action Value
+orgToHTMLWithOpts :: ReaderOptions -> WriterOptions -> T.Text -> Action Value
 orgToHTMLWithOpts rops wops txt =
   loadUsing
     (fmap orgAllMeta <$> readOrg rops) -- <$> is over partially applied func

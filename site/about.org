@@ -1,1 +1,9 @@
-I am groot.
+I am a software developer based in Copenhagen, Denmark.
+
+I'm a generalist programmer with skills ranging from infrastructre to front-end development. That said, I spend most of my time in the back-end. I have a particular interest in functional programming, but also have a strong background in more traditional imperative approaches.
+
+I'm a long-time Linux enthusiast. These days all my machines run NixOS, but I've run Arch, Ubuntu, Fedora, and more over the decades. I believe strongly in the importance of open-source software.
+
+A good deal of my free time is spent on personal programming or computer projects. Most of these can be found on Github.
+
+I also have a longstanding interest in (human) language. I completed a BA in theoretical linguistics, during which my chief interests were syntactic theory, prosody, and sociolinguistics. I've studied many languages over the years, with particular focus on Japanese, Icelandic and Irish. These days I'm mainly trying to speak passable Danish.

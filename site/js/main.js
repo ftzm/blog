@@ -1,15 +1,17 @@
-function switchTheme(){
+function switchTheme(save=false){
     var button = document.getElementById("theme-button");
     var html = document.getElementsByTagName("html")[0];
     html.classList.toggle("dark");
 
-    if(html.classList.contains == "dark"){
+  if (save) {
+    if(html.classList.contains("dark")){
         // Expire in two months
         setCookie("theme", "night", 60*24*60*60*1000);
     } else {
         // Expire in two months
         setCookie("theme", "day", 60*24*60*60*1000);
     }
+  }
 
     return;
 }
@@ -35,19 +37,20 @@ function getCookie(cname)
 }
 
 // Switch theme if cookie is set
-if (getCookie('theme')=='night') {
+var themeCookie = getCookie('theme')
+if (themeCookie == 'night') {
     switchTheme();
+} else if (themeCookie == 'day') {
 } else {
-    var userPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  var userPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   if (userPrefersDark) {
     switchTheme();
   }
-
 }
 
 // Switch theme if button is clicked.
 var themeButton = document.getElementById("theme-button");
-themeButton.addEventListener('click', switchTheme);
+themeButton.addEventListener('click', () => switchTheme(true));
 
 // toggle hamburger menu
 function toggleMenu(){
