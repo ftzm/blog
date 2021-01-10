@@ -91,6 +91,7 @@ data Post =
          , humanDate   :: String
          , tags        :: [PostTag]
          , teaser      :: String
+         , readTime    :: Int
          --, image       :: Maybe String
          , prev        :: Maybe Post
          , next        :: Maybe Post
@@ -120,6 +121,10 @@ buildIndex posts' = do
 
 --------------------------------------------------------------------------------
 -- Posts
+
+calcReadTime :: String -> Integer
+calcReadTime = fromIntegral . uncurry roundUp . (flip divMod 200) . length . words
+  where roundUp mins secs = mins + if secs == 0 then 0 else 1
 
 -- | combines discovery, parsing, enriching, and writing output files for all
 -- posts.
@@ -157,8 +162,10 @@ parsePost srcPath = do
       humanDateString =
         T.pack . formatDateHuman . T.unpack $ fromMaybe "" publishedString
       withHumanDate = _Object . at "humanDate" ?~ String humanDateString
+      contentString = T.unpack $ fromMaybe "" $ postData ^? key "content" . _String
+      withReadTime = _Object . at "readTime" ?~ Integer (calcReadTime contentString)
       -- apply all enrichments
-      fullPostData = withHumanDate . withSiteMeta . withPostUrl $ postData
+      fullPostData = withReadTime . withHumanDate . withSiteMeta . withPostUrl $ postData
 
   -- convert JSON blob to a Post.
   convert fullPostData
