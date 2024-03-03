@@ -2,7 +2,7 @@
 <html lang="en">
   {{>site/templates/head.html}}
 <body>
-    {{>site/templates/header.html}}
+    <!--{{>site/templates/header.html}}->
 
 <div id="page">
     <div class="wrapper">
@@ -13,9 +13,6 @@
               <a href="/tag/{{.}}" class="tag {{.}}">{{.}}</a>
               {{/tags}}
             </div>
-            <span class="title">
-                {{title}}
-            </span>
             <br>
 
             {{#image}}
@@ -23,21 +20,20 @@
             {{/image}}
             <br>
             <div class="metadata">
-	      <div class="headshot">
-		<img class="headshot-image" src="/images/headshot.png">
-	      </div>
             <span class="author">Matthew Fitzsimmons</span>
             <span class="published">{{humanDate}} • {{readTime}} min read</span>
             </div>
 	    <hr>
         </div>
-    </div>
-    <article class="post">
-      {{{content}}}
-    </article>
+    </div>-->
 
+  {{>site/templates/masthead.html}}
+    <section>
+    <h1> {{title}} </h1>
+    {{{content}}}
+    </section>
 
-    <div class="adjacent">
+    <!--<div class="adjacent">
       {{#prev}}
       <a href="/{{url}}" class="prev">
 	<div class="arrow">
@@ -65,6 +61,7 @@
     </div>
         <br>
         <br>
+	-->
 
 </div>
 

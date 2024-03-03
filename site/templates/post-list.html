@@ -1,11 +1,7 @@
 <ul>
     {{#posts}}
-        <li>
-          <a href="/{{url}}">
-	    <h1>{{title}}</h1>
-	    <span class="info">By Matthew Fitzsimmons on {{humanDate}}</span>
-	    <p> {{teaser}} </p>
-	  </a>
-        </li>
+    <li class="post-li">
+      <span>{{published}}<span class="sep">»</span><a href="/{{url}}"> {{title}}<span> </a>
+	  </li>
     {{/posts}}
 </ul>

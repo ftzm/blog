@@ -1,0 +1,74 @@
+
+
+@font-face {
+    font-family: "iosevka-slab";
+    src: url("iosevka-slab-regular.woff2");
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+html {
+  --source-bg: #fafaf3;
+  --superlight: #eeeee7;
+}
+
+p code {
+    background-color: inherit;
+    line-height: inherit;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    font-size: 1em;
+}
+
+pre code {
+  font-family: 'Iosevka Lig';
+  margin-left: 0;
+  padding-left: 1em;
+  font-size: 1.1em;
+}
+
+div.sourceCode {
+  margin-top: 2.5em;
+  margin-bottom: 2.5em;
+}
+div.sourceCode:last-child {
+  margin-bottom: 0em;
+}
+
+code {
+  font-family: 'Iosevka Lig';
+  //overflow-x: scroll;
+  max-width: 100%;
+  background-color: var(--source-bg);
+  border: 1px solid var(--superlight);
+  padding-top: 1em;
+  padding-bottom: 1em;
+  padding-left: 1em;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  font-size: 1em;
+  line-height: 1.3em;
+}
+
+/* The below width steps are based on tufte.css.
+   We want to ensure that code snippets fill the available space without breaking lines.
+ */
+@media (max-width: 1640px) {
+  pre code {
+    --minFontSize: 0.5em;
+    --maxFontSize: 2em;
+    --scaler: 1.1vw;
+    font-size: clamp( var(--minFontSize), var(--scaler), var(--maxFontSize) );
+  }
+}
+
+@media (max-width: 760px) {
+  pre code {
+    --minFontSize: 0.5em;
+    --maxFontSize: 2em;
+    --scaler: 2vw;
+    font-size: clamp( var(--minFontSize), var(--scaler), var(--maxFontSize) );
+  }
+}

@@ -1,0 +1,66 @@
+.masthead {
+    margin-top: 2em;
+}
+
+.masthead .link a {
+	text-decoration: none;
+}
+.logo {
+    font-size: 2em;
+    color: #F3DFDA;
+    background-color: #9d0006;
+    padding: 0.05em 0.27em;
+    border-radius: 0.05em;
+}
+
+.logo2 {
+    font-size: 3em;
+    color: #9d0006;
+    font-weight: bold;
+}
+
+
+.link{
+    font-size: 1.5em;
+    margin-left: 0.25em;
+    font-weight: bold;
+}
+
+.link + .link:before {
+    display: inline-block;
+    content: "\00B7 \00a0";
+    margin-right: 0.25em;
+}
+
+.link:nth-child(2) {
+    margin-left: 1.5em;
+}
+
+.post-li {
+    padding-top: 0.3em;
+}
+
+.post-li .sep {
+    margin-left: 0.5em;
+    margin-right: 0.5em;
+}
+
+footer {
+    margin-top: 3.5em;
+}
+
+h1 {
+    width: 55%;
+}
+
+@media (max-width: 1640px) {
+    h1 {
+	width: 100%
+    }
+}
+
+@media (max-width: 500px) {
+    html {
+	font-size:70%;
+    }
+}

@@ -11,6 +11,7 @@ import           Control.Lens
 import           Control.Monad
 import           Data.Aeson as A
 import           Data.Aeson.Lens
+import qualified Data.Aeson.KeyMap as KM
 import           Data.Function (on)
 import qualified Data.HashMap.Lazy as HML
 import           Data.List (sortBy)
@@ -46,7 +47,7 @@ outputFolder = "docs/"
 -- Data models
 
 withSiteMeta :: Value -> Value
-withSiteMeta (Object obj) = Object $ HML.union obj siteMetaObj
+withSiteMeta (Object obj) = Object $ KM.union obj siteMetaObj
   where
     Object siteMetaObj = toJSON siteMeta
 withSiteMeta _ = error "only add site meta to objects"

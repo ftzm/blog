@@ -9,6 +9,8 @@ rec {
           haskellPackages.hpack
           haskellPackages.ghcid
           zlib
+          nodePackages.serve
+          entr
         ];
         configureFlags = [
           "--extra-lib-dirs=${pkgs.zlib}/lib"
@@ -16,7 +18,7 @@ rec {
       }) ;
   };
   files = pkgs.stdenv.mkDerivation {
-    name = "ftzm-blog";
+    name = "build-site";
     src = ./.;
     phases = "unpackPhase buildPhase";
     version = "0.1";

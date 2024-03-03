@@ -1,16 +1,17 @@
+#+HTML_HEAD: <link rel="stylesheet" href="http://raw.githubusercontent.com/edwardtufte/tufte-css/gh-pages/tufte.css" type="text/css" />
 #+TITLE: New Year, New Blog
 #+PUBLISHED: 2021-02-04
 #+TEASER: I've overhauled my blog. It's still static, and I'm still using Haskell and Nix, but nearly everything else has changed.
 #+TAGS: :slick:haskell:pandoc:nix:
 
-I've overhauled my blog. It's still static, and I'm still using Haskell and Nix, but nearly everything else has changed. I have:
+I've overhauled my blog[fn:1]. It's still static, and I'm still using Haskell and Nix, but nearly everything else has changed. I have:
 
 - given it a new style with a dark mode
 - switched the blog framework from Hakyll to Slick
 - migrated the nix bootstrapping to flakes
 - switched from a docker image to a NixOS server deployed via deploy-rs
 
-It was a totally unnecessary project, but it gave me a welcome chance to play around with some new tools over the holidays, and I'm very happy with how it turned out. The following is a write-up of the major features of the new implementation.
+It was a totally[fn:2] unnecessary project, but it gave me a welcome chance to play around with some new tools over the holidays, and I'm very happy with how it turned out. The following is a write-up of the major features of the new implementation.
 
 * Written in org mode
 
@@ -271,3 +272,8 @@ Up until this point everything has been vanilla Nix. The final piece of the puzz
 #+end_src
 
 All that's necessary to deploy to the defined nodes is to run the following command: ~nix run github:serokell/deploy-rs ./. -- -- --impure~.
+
+* Footnotes
+
+[fn:1] Did this involve writing any substantive new content? Of course not! Fiddling with styling and deployment systems is the most import part of creating a blog.
+[fn:2] Fun isn’t necessary, but that doesn’t mean it’s not worthwhile.

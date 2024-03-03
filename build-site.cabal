@@ -1,10 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.2.
+-- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
 
-name:           ftzm-blog
+name:           build-site
 version:        0.1.0.0
 synopsis:       My site built with slick!
 description:    My slick Site
@@ -17,6 +17,8 @@ copyright:      20XX Me
 license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
+extra-source-files:
+    README.org
 
 source-repository head
   type: git
@@ -43,4 +45,6 @@ executable build-site
     , text
     , time
     , unordered-containers
+    , uuid
+    , digest <= 0.0.1.3
   default-language: Haskell2010
